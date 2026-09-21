@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Prediction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            /* animation: backgroundAnimation 15s infinite alternate; */
+            background: linear-gradient(90deg, #efd5ff 0%, #515ada 100%);         
+                  background-size: 300% 300%;
+        }
+
+        /* @keyframes backgroundAnimation {
+            0% {
+                background: linear-gradient(90deg, #efd5ff 0%, #515ada 100%);
+            }
+            25% {
+                background: linear-gradient(90deg, #ff9a9e 0%, #fad0c4 100%);
+            }
+            50% {
+                background: linear-gradient(90deg, #a1c4fd 0%, #c2e9fb 100%);
+            }
+            75% {
+                background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+            }
+            100% {
+                background: linear-gradient(90deg, #43cea2 0%, #185a9d 100%);
+            }
+        } */
+
+        .container {
+            max-width: 900px;
+            background: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            border-radius: 15px;
+            margin-top: 50px;
+        }
+        h1 {
+            color: #007bff;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        textarea {
+            resize: none;
+            border-radius: 10px;
+        }
+        button {
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        #predictionResult {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: 600;
+            color: #28a745;
+        }
+        .review-card {
+            border: none;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+        }
+        .review-image {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin-right: 20px;
+            background: #007bff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        .review-content {
+            flex-grow: 1;
+        }
+        .positive {
+            background: #d4edda;
+        }
+        .neutral {
+            background: #fff3cd;
+        }
+        .negative {
+            background: #f8d7da;
+        }
+        button:hover {
+            transform: scale(1.1);
+            transition: 0.3s ease-in-out;
+        }
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="d-flex justify-content-end mb-3">
+        <button onclick="window.history.back()" class="btn btn-dark me-3">⬅️ Back</button>
+        <button onclick="window.location.href='/'" class="btn btn-dark">🏠 Home</button>
+    </div>
+    
+    <h1>College Review Prediction</h1>
+    <form id="reviewForm" class="mt-4">
+        <select id="collegeDropdown" class="form-select mb-3">
+            <option>"Indian Institute of Technology,Madras"</option>
+            <option>"National Institute of Technology,Tiruchirappali"</option>
+            <option>"Vellore Institute of Technology,Vellore"</option>
+            <option>"Anna University,Chennai"</option>
+            <option>"SRM Institute of Science and Technology,Chennai"</option>
+            <option>"Amrita Vishwa Vidyapeetham,Coimbatore"</option>
+            <option>"Kalasalingam Academy of Research and Education,Virudhunagar"</option>
+            <option>"Shanmugha Arts Science Technology and Research Academy,Thanjavur"</option>
+            <option>"Sathyabama Institute of Science and Technology,Chennai"</option>
+            <option>"PSG College of Technology,Coimbatore"</option>     
+            <option>"Sri Krishna College of Engineering and Technology,Coimbatore"</option>
+            <option>"Rajalakshmi Engineering College,Chennai"</option>  
+            <option>"Thiagarajar College of Engineering,Madurai"</option>
+            <option>"Sri Sairam Engineering College,Kancheepuram"</option>
+            <option>"Kongu Engineering College,Perundurai"</option>
+            <option>"Coimbatore Institute of Technology,Coimbatore"</option>
+        </select>
+        <textarea id="reviewText" class="form-control mb-3" placeholder="Write your review..." rows="4"></textarea>
+        <button type="button" onclick="submitReview()" class="btn btn-primary w-100">Analyze & Submit</button>
+    </form>
+    <div id="predictionResult" class="text-center"></div>
+
+    <h2 class="mt-5 text-center">Recent Reviews</h2>
+    <div id="recentReviews">
+        <!-- Recent Reviews Loaded Here -->
+    </div>
+</div>
+
+<script>
+    async function submitReview() {
+        const college = document.getElementById('collegeDropdown').value;
+        const review = document.getElementById('reviewText').value;
+        const username = "{{ session['username'] }}";
+
+        if (!review) {
+            alert("Please write a review!");
+            return;
+        }
+
+        const response = await fetch('/submit_review', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, college, review})
+        });
+
+        const data = await response.json();
+        document.getElementById('predictionResult').innerText = "Sentiment: " + data.prediction;
+        loadReviews();
+    }
+
+    async function loadReviews() {
+        const response = await fetch('/get_reviews');
+        const reviews = await response.json();
+        const reviewList = document.getElementById('recentReviews');
+        reviewList.innerHTML = '';
+
+        reviews.forEach(review => {
+            const reviewCard = document.createElement('div');
+            reviewCard.classList.add('review-card', review.sentiment.toLowerCase());
+            reviewCard.innerHTML = `
+                <div class="review-image">${review.username.charAt(0).toUpperCase()}</div>
+                <div class="review-content">
+                    <h5>${review.username}</h5>
+                    <p>${review.college}</p>
+                    <p>${review.review}</p>
+                    <span class="badge bg-${review.sentiment === 'Positive' ? 'success' : review.sentiment === 'Neutral' ? 'warning' : 'danger'}">${review.sentiment}</span>
+                </div>
+            `;
+            reviewList.appendChild(reviewCard);
+        });
+    }
+
+    loadReviews();
+</script>
+</body>
+</html>
